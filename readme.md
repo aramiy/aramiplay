@@ -1,4 +1,4 @@
-# Netflix Clone - מערכת הפצת תכנים דיגיטליים
+# AramiPlay - מערכת הפצת תכנים דיגיטליים
 
 ##  טכנולוגיות
 
@@ -23,7 +23,7 @@
 ## 📁 מבנה הפרויקט
 
 ```
-netflix-clone/
+aramiplay/
 │
 ├── server.js                 # נקודת כניסה ראשית
 ├── package.json              # תלויות
@@ -38,7 +38,7 @@ netflix-clone/
 │   ├── User.js              # מודל משתמשים
 │   ├── Content.js           # מודל תוכן
 │   └── WatchHistory.js      # מודל צפייה
-│   └── Profile.js      # מודל פרופיל
+│   └── Profile.js           # מודל פרופיל
 │
 ├── controllers/
 │   ├── authController.js    # בקר אימות
@@ -93,8 +93,7 @@ netflix-clone/
 
 1. **שכפול הפרויקט**
 ```bash
-git clone <repository-url>
-cd netflix-clone
+git clone https://github.com/aramiy/aramiplay
 ```
 
 2. **התקנת תלויות**
@@ -111,25 +110,22 @@ MONGODB_URI=mongodb://localhost:27017/netflix-clone
 SESSION_SECRET=your-super-secret-key-here
 ITEMS_PER_PAGE=20
 IMDB_API_KEY=your-api-key
+OMDB_API_URL=https://www.omdbapi.com/
+ALLOWED_ORIGINS=http://localhost:3000
 ```
 
-4. **יצירת תיקיות נדרשות**
-```bash
-mkdir -p public/videos public/images public/images/uploads logs
-```
-
-5. **הרצת MongoDB**
+4. **הרצת MongoDB**
 וודא ש-MongoDB פועל על המחשב שלך:
 ```bash
 mongod
 ```
 
-6. **הרצת השרת**
+5. **הרצת השרת**
 ```bash
 npm start
 ```
 
-7. **פתיחת הדפדפן**
+6. **פתיחת הדפדפן**
 ```
 http://localhost:3000
 ```
