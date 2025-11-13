@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AramiPlay - ז'אנר</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .filters-bar {
+            background: var(--card-white);
+            padding: 1.5rem 2rem;
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-label {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+        
+        .filter-btn {
+            padding: 0.5rem 1.5rem;
+            background: var(--input-bg);
+            border: 2px solid var(--input-border);
+            border-radius: 20px;
+            color: var(--text-dark);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
+        }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+        
+        .load-more-container {
+            text-align: center;
+            margin: 3rem 0;
+        }
+        
+        .btn-load-more {
+            padding: 1rem 3rem;
+            background: var(--primary-yellow);
+            color: var(--text-black);
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-load-more:hover {
+            background: var(--hover-yellow);
+            box-shadow: 0 6px 20px var(--shadow-yellow);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="/feed" class="navbar-brand">AramiPlay</a>
+            <ul class="navbar-menu">
+                <li><a href="/feed" class="navbar-link">דף הבית</a></li>
+                <li><a href="/settings" class="navbar-link">הגדרות</a></li>
+                <li><button onclick="logout()" class="btn-logout">התנתק</button></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <h1 class="section-title" id="genreTitle">טוען...</h1>
+        
+        <div class="filters-bar">
+            <div class="filter-group">
+                <span class="filter-label">מיין לפי:</span>
+                <button class="filter-btn active" onclick="sortBy('popular')">פופולריות</button>
+                <button class="filter-btn" onclick="sortBy('rating')">דירוג</button>
+                <button class="filter-btn" onclick="sortBy('year')">שנה</button>
+            </div>
+            
+            <div class="filter-group" style="margin-top: 1rem;">
+                <span class="filter-label">סינון:</span>
+                <button class="filter-btn active" onclick="filterBy('all')">הכל</button>
+                <button class="filter-btn" onclick="filterBy('unwatched')">לא נצפה</button>
+                <button class="filter-btn" onclick="filterBy('watched')">נצפה</button>
+            </div>
+        </div>
+
+        <div class="content-grid" id="contentGrid">
+            <div class="text-center py-5" style="grid-column: 1/-1;">
+                <div class="loading-spinner"></div>
+            </div>
+        </div>
+
+        <div class="load-more-container" id="loadMoreContainer" style="display: none;">
+            <button class="btn-load-more" onclick="loadMore()">טען עוד</button>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        const genreName = decodeURIComponent(window.location.pathname.split('/').pop());
+
+        // שמות שונים כדי לא להתנגש עם main.js
+        let genrePage = 1;
+        let currentSort = '-viewCount';
+        let currentFilter = null;
+        let hasMore = true;
+        let genreIsLoading = false;
+
+        async function loadContent(reset = false) {
+            if (reset) {
+                genrePage = 1;
+                hasMore = true;
+            }
+
+            try {
+                const params = {
+                    genre: genreName,
+                    sort: currentSort,
+                    page: genrePage
+                };
+
+                if (currentFilter === 'watched') {
+                    params.watched = 'true';
+                } else if (currentFilter === 'unwatched') {
+                    params.watched = 'false';
+                }
+
+                const response = await API.getContent(params);
+
+                if (response.data && response.data.length > 0) {
+                    const grid = document.getElementById('contentGrid');
+
+                    if (reset) {
+                        grid.innerHTML = '';
+                    }
+
+                    response.data.forEach(content => {
+                        grid.innerHTML += createGenreContentCard(content);
+                    });
+
+                    if (response.pagination) {
+                        hasMore = response.pagination.page < response.pagination.pages;
+                    } else {
+                        // fallback אם אין pagination
+                        hasMore = response.data.length === params.limit;
+                    }
+
+                    document.getElementById('loadMoreContainer').style.display =
+                        hasMore ? 'block' : 'none';
+                } else {
+                    if (reset) {
+                        document.getElementById('contentGrid').innerHTML =
+                            '<p class="text-muted" style="grid-column: 1/-1; text-align: center;">לא נמצא תוכן בז\'אנר זה</p>';
+                    }
+                    hasMore = false;
+                    document.getElementById('loadMoreContainer').style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error loading content:', error);
+                document.getElementById('contentGrid').innerHTML =
+                    '<p class="text-muted" style="grid-column: 1/-1; text-align: center;">שגיאה בטעינת תוכן</p>';
+            }
+        }
+
+        function createGenreContentCard(content) {
+            return `
+                <div class="content-card" onclick="goToContent('${content._id}')">
+                    <img src="${content.thumbnailUrl}" alt="${content.title}">
+                    <div class="content-card-info">
+                        <h4 class="content-card-title">${content.title}</h4>
+                        <p class="content-card-meta">
+                            ${content.releaseYear} • ${content.type === 'movie' ? 'סרט' : 'סדרה'}
+                            ${content.rating?.imdb ? '<br>⭐ ' + content.rating.imdb + '/10' : ''}
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function sortBy(type) {
+            document
+                .querySelectorAll('.filter-group:first-child .filter-btn')
+                .forEach(btn => btn.classList.remove('active'));
+
+            if (window.event && window.event.target) {
+                window.event.target.classList.add('active');
+            }
+
+            switch (type) {
+                case 'popular':
+                    currentSort = '-viewCount';
+                    break;
+                case 'rating':
+                    currentSort = '-rating.imdb';
+                    break;
+                case 'year':
+                    currentSort = '-releaseYear';
+                    break;
+            }
+
+            loadContent(true);
+        }
+
+        function filterBy(type) {
+            document
+                .querySelectorAll('.filter-group:last-child .filter-btn')
+                .forEach(btn => btn.classList.remove('active'));
+
+            if (window.event && window.event.target) {
+                window.event.target.classList.add('active');
+            }
+
+            switch (type) {
+                case 'all':
+                    currentFilter = null;
+                    break;
+                case 'watched':
+                    currentFilter = 'watched';
+                    break;
+                case 'unwatched':
+                    currentFilter = 'unwatched';
+                    break;
+            }
+
+            loadContent(true);
+        }
+
+        function loadMore() {
+            if (hasMore) {
+                genrePage++;
+                loadContent(false);
+            }
+        }
+
+        async function logout() {
+            try {
+                await API.logout();
+                window.location.href = '/login';
+            } catch (error) {
+                alert('שגיאה בהתנתקות');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('genreTitle').textContent = `ז'אנר: ${genreName}`;
+            loadContent(true);
+
+            // גלילה אינסופית מקומית לעמוד ז'אנר
+            window.addEventListener('scroll', () => {
+                if (genreIsLoading || !hasMore) return;
+
+                const scrollHeight = document.documentElement.scrollHeight;
+                const scrollTop = document.documentElement.scrollTop;
+                const clientHeight = document.documentElement.clientHeight;
+
+                if (scrollTop + clientHeight >= scrollHeight - 500) {
+                    genreIsLoading = true;
+                    loadMore();
+                    setTimeout(() => { genreIsLoading = false; }, 800);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

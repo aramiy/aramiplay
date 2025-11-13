@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AramiPlay - תוכן</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .content-page {
+            background-color: var(--background);
+            min-height: 100vh;
+        }
+
+        /* אזור הבאנר העליון */
+        .content-banner {
+            min-height: 60vh;
+            background-size: cover;
+            background-position: center top;
+            position: relative;
+            display: flex;
+            align-items: flex-end;       /* התוכן יושב בתחתית הבאנר */
+        }
+
+        .content-banner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to bottom,
+                rgba(0,0,0,0.15) 0%,
+                var(--background) 100%
+            );
+        }
+
+        .content-details {
+            position: relative;
+            z-index: 2;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+            width: 100%;
+        }
+
+        /* מחלקת layout פנימית – טקסט בצד, תמונה+כפתורים בצד */
+        .content-details-inner {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .content-text-block {
+            flex: 1 1 320px;
+            min-width: 0;
+        }
+
+        .poster-actions {
+            flex: 0 0 auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;   /* התמונה + הכפתורים באמצע */
+            justify-content: center;
+        }
+
+        .content-title-large {
+            font-size: 3rem;
+            color: var(--text-dark);
+            margin-bottom: 1rem;
+            font-weight: bold;
+        }
+
+        .content-meta-large {
+            font-size: 1.2rem;
+            color: var(--text-dark);
+            margin-bottom: 1.5rem;
+        }
+
+        .content-description {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--text-dark);
+            max-width: 800px;
+            margin-bottom: 1rem;
+        }
+
+        /* התמונה עצמה – עם מרווח מלמעלה */
+        .content-thumbnail {
+            max-width: 350px;
+            border-radius: 12px;
+            margin-top: 1.5rem;        /* מרווח מעל התמונה */
+            margin-bottom: 1.5rem;     /* מרווח לפני הכפתורים */
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.5rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: center; /* הכפתורים באמצע מתחת לתמונה */
+        }
+
+        .btn-large {
+            padding: 1rem 2.5rem;
+            font-size: 1.2rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .info-card {
+            background: var(--card-white);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .info-value {
+            color: #666;
+        }
+
+        .cast-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .cast-item {
+            text-align: center;
+        }
+
+        .cast-link {
+            color: var(--primary-blue);
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .cast-link:hover {
+            color: var(--primary-yellow);
+            text-decoration: underline;
+        }
+
+        .similar-section {
+            max-width: 1400px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .series-picker {
+            display: none;
+            gap: .75rem;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-top: .75rem;
+        }
+
+        .series-picker .picker-item {
+            display: flex;
+            gap: .5rem;
+            align-items: center;
+            background: var(--card-white);
+            padding: .5rem .75rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        }
+
+        .series-picker label {
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        .series-picker select {
+            appearance: none;
+            padding: .4rem .6rem;
+            border-radius: 8px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text-dark);
+        }
+
+        .hint {
+            font-size: .9rem;
+            color: #666;
+            margin-top: .25rem;
+        }
+
+        /* רספונסיביות – בנייד הכל באמצע */
+        @media (max-width: 768px) {
+            .content-details-inner {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .content-text-block {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body class="content-page">
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="/feed" class="navbar-brand">AramiPlay</a>
+            <ul class="navbar-menu">
+                <li><a href="/feed" class="navbar-link">דף הבית</a></li>
+                <li><a href="/settings" class="navbar-link">הגדרות</a></li>
+                <li><button onclick="logout()" class="btn-logout">התנתק</button></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="content-banner" id="contentBanner">
+        <div class="content-details">
+            <div class="content-details-inner">
+                <!-- צד הטקסט -->
+                <div class="content-text-block">
+                    <h1 class="content-title-large" id="contentTitle">טוען...</h1>
+                    <div class="content-meta-large" id="contentMeta"></div>
+                    <p class="content-description" id="contentDescription"></p>
+
+                    <!-- בחירת עונה/פרק לסדרות -->
+                    <div id="seriesPicker" class="series-picker">
+                        <div class="picker-item">
+                            <label for="seasonSelect">עונה:</label>
+                            <select id="seasonSelect"></select>
+                        </div>
+                        <div class="picker-item">
+                            <label for="episodeSelect">פרק:</label>
+                            <select id="episodeSelect"></select>
+                        </div>
+                        <div class="hint" id="lastWatchedHint"></div>
+                    </div>
+                </div>
+
+                <!-- צד התמונה + הכפתורים -->
+                <div class="poster-actions">
+                    <!-- תמונת התוכן -->
+                    <img id="contentThumbnail" class="content-thumbnail" style="display:none" alt="תמונת תוכן">
+
+                    <div class="action-buttons">
+                        <button class="btn-large"
+                                style="background: var(--primary-blue); color: white;"
+                                onclick="playContent()">▶ נגן</button>
+                        <button class="btn-large"
+                                style="background: var(--primary-yellow); color: var(--text-black);"
+                                onclick="toggleLike()">
+                            <span id="likeButton">♡ אהבתי</span>
+                        </button>
+                        <!-- ⭐ כפתור התחלה מחדש -->
+                        <button class="btn-large"
+                                style="background: var(--card-white); color: var(--text-black); border:1px solid #ccc;"
+                                onclick="restartContent()">⟲ התחל מהתחלה</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-card">
+            <div class="info-label">ז'אנרים</div>
+            <div class="info-value" id="genres"></div>
+        </div>
+        <div class="info-card">
+            <div class="info-label">במאי</div>
+            <div class="info-value" id="director"></div>
+        </div>
+        <div class="info-card">
+            <div class="info-label">שנת יציאה</div>
+            <div class="info-value" id="year"></div>
+        </div>
+        <div class="info-card">
+            <div class="info-label">דירוג</div>
+            <div class="info-value" id="rating"></div>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-card" style="grid-column: 1 / -1;">
+            <div class="info-label">שחקנים</div>
+            <div class="cast-grid" id="castList"></div>
+        </div>
+    </div>
+
+    <div class="similar-section" id="similarSection" style="display: none;">
+        <h2 class="section-title">תכנים דומים</h2>
+        <div class="content-carousel" id="similarCarousel"></div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        const contentId = window.location.pathname.split('/').pop();
+        let currentContent = null;
+        let isLiked = false;
+
+        async function loadContent() {
+            try {
+                const response = await API.getContentById(contentId);
+                const payload = response.data;
+                currentContent = payload.content;
+
+                // עדכון סטטוס אהבתי
+                const likeButton = document.getElementById('likeButton');
+                isLiked = !!payload.liked;
+                likeButton.textContent = isLiked ? '♥ אהבתי' : '♡ אהבתי';
+
+                // כותרות, מטא ותיאור
+                document.getElementById('contentTitle').textContent = currentContent.title;
+                const meta = `
+                    ${currentContent.releaseYear || ''} • 
+                    ${currentContent.type === 'movie' ? 'סרט' : 'סדרה'} • 
+                    ${currentContent.duration ? Math.floor(currentContent.duration / 60) + ' דקות' : ''}
+                `;
+                document.getElementById('contentMeta').textContent = meta;
+                document.getElementById('contentDescription').textContent = currentContent.description || '';
+
+                // תמונת התוכן (thumbnail)
+                const thumb = document.getElementById('contentThumbnail');
+                if (currentContent.thumbnailUrl) {
+                    thumb.src = currentContent.thumbnailUrl;
+                    thumb.style.display = 'block';
+                } else {
+                    thumb.style.display = 'none';
+                }
+
+                // באנר (אם יש)
+                if (currentContent.bannerUrl) {
+                    document.getElementById('contentBanner').style.backgroundImage = `url(${currentContent.bannerUrl})`;
+                }
+
+                // שדות מידע
+                document.getElementById('genres').textContent = (currentContent.genres || []).join(', ');
+                document.getElementById('director').textContent = currentContent.director || 'לא ידוע';
+                document.getElementById('year').textContent = currentContent.releaseYear || '';
+                const ratingText = [];
+                if (currentContent.rating?.imdb) ratingText.push(`IMDB: ${currentContent.rating.imdb}/10`);
+                if (currentContent.rating?.rottenTomatoes) ratingText.push(`RT: ${currentContent.rating.rottenTomatoes}%`);
+                document.getElementById('rating').textContent = ratingText.join(' • ') || 'אין דירוג';
+
+                // קאסט
+                const castList = document.getElementById('castList');
+                if (Array.isArray(currentContent.cast) && currentContent.cast.length > 0) {
+                    castList.innerHTML = currentContent.cast
+                        .map(actor => {
+                            if (typeof actor === 'string') {
+                                return `<div class="cast-item">${actor}</div>`;
+                            }
+                            const name = actor && (actor.name || actor.fullName || '');
+                            return `<div class="cast-item">${name}</div>`;
+                        })
+                        .join('');
+                } else {
+                    castList.innerHTML = '<p class="text-muted">אין מידע</p>';
+                }
+
+                // תכנים דומים
+                if (payload.similar && payload.similar.length > 0) {
+                    const section = document.getElementById('similarSection');
+                    const carousel = document.getElementById('similarCarousel');
+                    section.style.display = 'block';
+                    carousel.innerHTML = payload.similar.map(c => `
+                        <div class="content-card" onclick="window.location.href='/content/${c._id}'">
+                            <img src="${c.thumbnailUrl}" alt="${c.title}">
+                            <div class="content-card-info">
+                                <h4 class="content-card-title">${c.title}</h4>
+                                <p class="content-card-meta">
+                                    ${c.releaseYear || ''} • ${c.type === 'movie' ? 'סרט' : 'סדרה'}
+                                </p>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (err) {
+                console.error('Error loading content', err);
+                alert('שגיאה בטעינת התוכן');
+            }
+        }
+
+        function playContent() {
+            window.location.href = `/player/${contentId}`;
+        }
+
+        async function toggleLike() {
+            try {
+                const res = await API.toggleLike(contentId);
+                isLiked = res.liked;
+                document.getElementById('likeButton').textContent = isLiked ? '♥ אהבתי' : '♡ אהבתי';
+            } catch (err) {
+                alert('שגיאה בעדכון אהבתי');
+            }
+        }
+
+		function restartContent() {
+			window.location.href = `/player/${contentId}?restart=1`;
+		}
+
+        async function logout() {
+            try {
+                await API.logout();
+                window.location.href = '/login';
+            } catch {
+                alert('שגיאה בהתנתקות');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadContent);
+    </script>
+</body>
+</html>

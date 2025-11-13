@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>ניהול תוכן - AramiPlay</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-content">
+      <a href="/feed" class="navbar-brand">AramiPlay ADMIN</a>
+      <ul class="navbar-menu">
+        <li><a href="/feed" class="navbar-link">דף הבית</a></li>
+        <li><a href="/admin" class="navbar-link">ניהול</a></li>
+        <li><button onclick="logout()" class="btn-logout">התנתק</button></li>
+      </ul>
+    </div>
+  </nav>
+
+  <div class="main-container">
+    <h1 class="section-title">ניהול תוכן</h1>
+
+    <!-- הוספת תוכן חדש -->
+    <div class="settings-section">
+      <h2 style="font-size:1.5rem;margin-bottom:1.5rem;color:var(--text-dark);">הוספת תוכן חדש</h2>
+
+      <form id="addContentForm">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+          <div class="form-group">
+            <label class="form-label">כותרת</label>
+            <input type="text" name="title" class="form-control" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">סוג</label>
+            <select name="type" class="form-control" required onchange="toggleTypeFields()">
+              <option value="movie">סרט</option>
+              <option value="series">סדרה</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">תיאור</label>
+          <textarea name="description" class="form-control" rows="4" required></textarea>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.5rem;">
+          <div class="form-group">
+            <label class="form-label">שנה</label>
+            <input type="number" name="releaseYear" class="form-control" min="1900" max="2030" required />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">במאי</label>
+            <input type="text" name="director" class="form-control" />
+          </div>
+
+          <!-- רלוונטי רק לסרט -->
+          <div class="form-group" id="durationField">
+            <label class="form-label">משך (דקות)</label>
+            <input type="number" name="duration" class="form-control" min="1" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">ז'אנרים (מופרדים בפסיק)</label>
+          <input type="text" name="genres" class="form-control" placeholder="פעולה, קומדיה, דרמה" required />
+        </div>
+
+        <!-- חדש: שחקנים -->
+        <div class="form-group">
+          <label class="form-label">שחקנים (מופרדים בפסיק)</label>
+          <input type="text" name="cast" class="form-control" placeholder="שחקן 1, שחקן 2, שחקן 3" />
+        </div>
+
+        <!-- תמונת תצוגה בלבד (הסרנו באנר) -->
+        <div class="form-group">
+          <label class="form-label">תמונת תצוגה (URL)</label>
+          <input type="text" name="thumbnailUrl" class="form-control" placeholder="https://..." required />
+        </div>
+
+        <!-- וידאו לסרט (URL בלבד – לא נוגעים) -->
+        <div class="form-group" id="videoUrlField">
+          <label class="form-label">קישור לוידאו (URL)</label>
+          <input type="text" name="videoUrl" class="form-control" placeholder="https://example.com/video.mp4" />
+        </div>
+
+        <!-- בונה סדרה: עונות/פרקים -->
+        <div id="seriesBuilder" style="display:none; margin-top:1rem;">
+          <div class="form-group">
+            <label class="form-label">מספר עונות</label>
+            <input type="number" id="totalSeasonsInput" class="form-control" min="1" value="1" />
+          </div>
+
+          <div style="display:flex;gap:.5rem;margin:.5rem 0 1rem;">
+            <button type="button" class="btn btn-primary" onclick="addSeason()">הוסף עונה</button>
+            <button type="button" class="btn" onclick="clearSeasons()">נקה עונות</button>
+          </div>
+
+          <div id="seasonsContainer" class="card" style="padding:1rem;border-radius:12px;background:var(--card-white);"></div>
+        </div>
+
+        <div style="display:flex;gap:1rem;margin-top:2rem;">
+          <button type="submit" class="btn btn-primary">הוסף תוכן</button>
+          <button type="reset" class="btn" style="background:#ccc;color:#333;" onclick="afterReset()">נקה טופס</button>
+        </div>
+      </form>
+
+      <div id="successMessage" class="alert alert-success d-none" style="margin-top:1.5rem;"></div>
+      <div id="errorMessage" class="alert alert-danger d-none" style="margin-top:1.5rem;"></div>
+    </div>
+
+    <!-- תוכן קיים (ללא שינוי לוגי) -->
+    <div class="settings-section">
+      <h2 style="font-size:1.5rem;margin-bottom:1.5rem;color:var(--text-dark);">תוכן קיים</h2>
+      <div id="contentList"></div>
+    </div>
+  </div>
+
+  <script>
+    // כמו במקור: מצב סרט/סדרה
+    function toggleTypeFields() {
+      const type = document.querySelector('select[name="type"]').value;
+      const durationField = document.getElementById('durationField');
+      const videoUrlField = document.getElementById('videoUrlField');
+      const seriesBuilder = document.getElementById('seriesBuilder');
+
+      if (type === 'movie') {
+        durationField.style.display = 'block';
+        videoUrlField.style.display = 'block';
+        seriesBuilder.style.display = 'none';
+      } else {
+        durationField.style.display = 'none';
+        videoUrlField.style.display = 'none';
+        seriesBuilder.style.display = 'block';
+      }
+    }
+
+    function afterReset() {
+      clearSeasons();
+      toggleTypeFields();
+    }
+
+    // Builder של סדרה — זהה למקור
+    function addSeason() {
+      const seasonsContainer = document.getElementById('seasonsContainer');
+      const totalSeasonsInput = document.getElementById('totalSeasonsInput');
+      const currentCount = seasonsContainer.querySelectorAll('.season-block').length;
+      const nextSeason = currentCount + 1;
+
+      const block = document.createElement('div');
+      block.className = 'season-block';
+      block.dataset.season = String(nextSeason);
+      block.style.cssText = 'border:1px solid var(--input-border); border-radius:10px; padding:1rem; margin-bottom:1rem;';
+
+      block.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:.5rem;">
+          <strong>עונה ${nextSeason}</strong>
+          <div style="display:flex;gap:.5rem;">
+            <button type="button" class="btn btn-primary" onclick="addEpisode(this)">הוסף פרק</button>
+            <button type="button" class="btn" style="background:#eee;color:#333" onclick="removeSeason(this)">מחק עונה</button>
+          </div>
+        </div>
+        <div class="episodes"></div>
+      `;
+      seasonsContainer.appendChild(block);
+      totalSeasonsInput.value = seasonsContainer.querySelectorAll('.season-block').length;
+    }
+
+    function removeSeason(btn) {
+      const block = btn.closest('.season-block');
+      block?.remove();
+      const seasonsContainer = document.getElementById('seasonsContainer');
+      const totalSeasonsInput = document.getElementById('totalSeasonsInput');
+      const blocks = seasonsContainer.querySelectorAll('.season-block');
+      blocks.forEach((b, idx) => {
+        b.dataset.season = String(idx + 1);
+        b.querySelector('strong').textContent = `עונה ${idx + 1}`;
+      });
+      totalSeasonsInput.value = blocks.length;
+    }
+
+    function clearSeasons() {
+      document.getElementById('seasonsContainer').innerHTML = '';
+      document.getElementById('totalSeasonsInput').value = 1;
+    }
+
+    function addEpisode(seasonBtn) {
+      const seasonBlock = seasonBtn.closest('.season-block');
+      const seasonNumber = parseInt(seasonBlock.dataset.season, 10);
+      const episodesWrap = seasonBlock.querySelector('.episodes');
+      const episodeCount = episodesWrap.querySelectorAll('.episode-row').length;
+      const episodeNumber = episodeCount + 1;
+
+      const row = document.createElement('div');
+      row.className = 'episode-row';
+      row.style.cssText = 'border:1px dashed var(--input-border);border-radius:8px;padding:.75rem;margin:.5rem 0;';
+
+      row.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem;align-items:end;">
+          <div>
+            <label class="form-label">עונה</label>
+            <input type="number" class="form-control ep-season" min="1" value="${seasonNumber}" />
+          </div>
+          <div>
+            <label class="form-label">פרק</label>
+            <input type="number" class="form-control ep-number" min="1" value="${episodeNumber}" />
+          </div>
+          <div>
+            <label class="form-label">כותרת</label>
+            <input type="text" class="form-control ep-title" placeholder="שם הפרק" />
+          </div>
+          <div>
+            <label class="form-label">משך (דקות)</label>
+            <input type="number" class="form-control ep-duration" min="1" />
+          </div>
+          <div>
+            <label class="form-label">וידאו (URL)</label>
+            <input type="text" class="form-control ep-video" placeholder="/videos/..." />
+          </div>
+        </div>
+        <div style="text-align:left;margin-top:.5rem;">
+          <button type="button" class="btn" style="background:#eee;color:#333" onclick="this.closest('.episode-row').remove()">מחק פרק</button>
+        </div>
+      `;
+      episodesWrap.appendChild(row);
+    }
+
+    // --- תוכן קיים + מחיקה (ללא שינוי לוגי) ---
+    async function deleteContent(id, title) {
+      const ok = confirm(`האם למחוק את "${title}"?`);
+      if (!ok) return;
+      try {
+        const res = await fetch(`/api/admin/content/${id}`, { method:'DELETE' });
+        const data = await res.json().catch(()=>({}));
+        if (!res.ok || !data.success) throw new Error(data.message || data.error || 'Delete failed');
+        await loadAdminContent();
+      } catch (e) {
+        console.error(e); alert(e.message || 'שגיאה במחיקה');
+      }
+    }
+
+    async function loadAdminContent() {
+      const listEl = document.getElementById('contentList');
+      listEl.innerHTML = '<p>טוען תוכן...</p>';
+      try {
+        const res = await fetch('/api/admin/content?isActive=true');
+        const data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || data.error || 'Load failed');
+        if (!data.data?.length) { listEl.innerHTML = '<p>אין תכנים במערכת עדיין.</p>'; return; }
+        listEl.innerHTML = data.data.map(item => `
+          <div class="content-item" style="padding:.5rem 0;border-bottom:1px solid #ddd;display:flex;gap:1rem;align-items:center;justify-content:space-between;">
+            <div style="display:flex;gap:1rem;align-items:center;">
+              ${item.thumbnailUrl ? `<img src="${item.thumbnailUrl}" alt="${item.title}" style="width:80px;height:45px;object-fit:cover;border-radius:4px;" />` : ''}
+              <div>
+                <strong>${item.title}</strong>
+                <span> (${item.type || 'unknown'}${item.releaseYear ? ', ' + item.releaseYear : ''})</span>
+                <div style="font-size:.85rem;color:#666;">ז'אנרים: ${(item.genres||[]).join(', ')}</div>
+              </div>
+            </div>
+            <div>
+              <button class="btn btn-danger" style="padding:.3rem .8rem;font-size:.85rem;" onclick="deleteContent('${item._id}','${item.title.replace(/'/g,"\\'")}')">מחק</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error(e); listEl.innerHTML = '<p>שגיאה בטעינת התוכן.</p>';
+      }
+    }
+
+    // --- שליחת הטופס: אם “סדרה” — בניית episodes+totalSeasons; אם “סרט” — נשאר כמו שהיה ---
+    document.getElementById('addContentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const successEl = document.getElementById('successMessage');
+      const errorEl = document.getElementById('errorMessage');
+      successEl?.classList.add('d-none'); successEl.textContent = '';
+      errorEl?.classList.add('d-none'); errorEl.textContent = '';
+
+      const form = e.target;
+      const formData = new FormData(form);
+      const type = formData.get('type');
+      const genresRaw = formData.get('genres') || '';
+      const castRaw = formData.get('cast') || '';
+
+      const payload = {
+        title: formData.get('title'),
+        description: formData.get('description'),
+        type,
+        genres: genresRaw.split(',').map(g=>g.trim()).filter(Boolean),
+        cast: castRaw.split(',').map(c=>c.trim()).filter(Boolean),
+        releaseYear: formData.get('releaseYear') ? parseInt(formData.get('releaseYear'),10) : undefined,
+        director: formData.get('director') || undefined,
+        // רק לסרט:
+        duration: formData.get('duration') ? parseInt(formData.get('duration'),10) : undefined,
+        thumbnailUrl: formData.get('thumbnailUrl') || undefined,
+        // הוסר bannerUrl בכוונה
+        videoUrl: formData.get('videoUrl') || undefined
+      };
+
+      if (type === 'series') {
+        const totalSeasons = parseInt(document.getElementById('totalSeasonsInput').value || '0', 10);
+        const episodes = [];
+        document.querySelectorAll('.season-block').forEach(seasonBlock => {
+          const seasonNumber = parseInt(seasonBlock.dataset.season, 10);
+          seasonBlock.querySelectorAll('.episode-row').forEach(row => {
+            const ep = {
+              seasonNumber: parseInt(row.querySelector('.ep-season').value, 10) || seasonNumber,
+              episodeNumber: parseInt(row.querySelector('.ep-number').value, 10),
+              title: (row.querySelector('.ep-title').value || '').trim(),
+              duration: parseInt(row.querySelector('.ep-duration').value, 10),
+              videoUrl: (row.querySelector('.ep-video').value || '').trim()
+            };
+            episodes.push(ep);
+          });
+        });
+
+        payload.totalSeasons = totalSeasons || new Set(episodes.map(e => e.seasonNumber)).size;
+        payload.episodes = episodes;
+
+        // עבור סדרה לא נשלח duration/videoUrl של סרט
+        delete payload.duration;
+        delete payload.videoUrl;
+      }
+
+      try {
+        const response = await fetch('/api/admin/content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(()=>({}));
+
+        if (!response.ok || !data.success) {
+          errorEl.textContent = data.message || data.error || 'שגיאה בהוספת תוכן';
+          errorEl.classList.remove('d-none');
+          return;
+        }
+
+        successEl.textContent = data.message || 'התוכן נוסף בהצלחה';
+        successEl.classList.remove('d-none');
+
+        form.reset();
+        clearSeasons();
+        toggleTypeFields();
+        await loadAdminContent();
+      } catch (err) {
+        console.error('Add content error:', err);
+        errorEl.textContent = 'שגיאת רשת. נסה שוב מאוחר יותר.';
+        errorEl.classList.remove('d-none');
+      }
+    });
+
+    async function logout() {
+      try { await fetch('/api/auth/logout', { method:'POST' }); }
+      catch(e){ console.error(e); }
+      finally { window.location.href = '/login'; }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      toggleTypeFields();
+      loadAdminContent();
+    });
+  </script>
+</body>
+</html>

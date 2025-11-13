@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>נגן - AramiPlay</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body style="background: #000; margin: 0; overflow: hidden;">
+    <div class="player-container">
+        <div class="video-wrapper" id="videoWrapper">
+            <video id="videoPlayer" class="video-player">
+                <source id="videoSource" src="" type="video/mp4">
+                הדפדפן שלך לא תומך בנגן וידאו.
+            </video>
+            
+            <div class="video-controls">
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                
+                <div class="controls-row">
+                    <div>
+                        <button class="control-btn" id="playPauseBtn">▶</button>
+                        <button class="control-btn" id="back10Btn">⏩ 10s</button>
+                        <button class="control-btn" id="forward10Btn">⏪ 10s</button>
+                        <span style="color: white; margin: 0 1rem;" id="timeDisplay">0:00 / 0:00</span>
+                    </div>
+                    
+                    <div>
+                        <button class="control-btn" id="nextEpisodeBtn" style="display: none;">
+                            פרק הבא →
+                        </button>
+                        <button class="control-btn" id="fullscreenBtn">⛶</button>
+                        <button class="control-btn" id="closeBtn">✕</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- סקריפטים -->
+    <script src="/js/main.js"></script>
+    <script src="/js/player.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const contentId = window.location.pathname.split('/').pop();
+        const video = document.getElementById('videoPlayer');
+
+        // יצירת נגן
+        window.player = new NetflixPlayer(video, contentId);
+
+        // חיבור כפתורים ל־player (המחלקה כבר יודעת לטפל ב־keyboard ועוד)
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const back10Btn = document.getElementById('back10Btn');
+        const forward10Btn = document.getElementById('forward10Btn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const closeBtn = document.getElementById('closeBtn');
+        const nextEpisodeBtn = document.getElementById('nextEpisodeBtn');
+
+        playPauseBtn.addEventListener('click', () => player.togglePlayPause());
+        back10Btn.addEventListener('click', () => player.skip(-10));
+        forward10Btn.addEventListener('click', () => player.skip(10));
+        fullscreenBtn.addEventListener('click', () => player.toggleFullscreen());
+        closeBtn.addEventListener('click', () => window.history.back());
+
+        // פרק הבא לסדרה – אם יש
+        if (nextEpisodeBtn) {
+          nextEpisodeBtn.addEventListener('click', () => player.playNextEpisode());
+        }
+      });
+    </script>
+</body>
+</html>

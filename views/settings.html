@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הגדרות - AramiPlay</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="/feed" class="navbar-brand">AramiPlay</a>
+            <ul class="navbar-menu">
+                <li><a href="/feed" class="navbar-link">דף הבית</a></li>
+                <li><a href="/settings" class="navbar-link">הגדרות</a></li>
+                <li><button onclick="logout()" class="btn-logout">התנתק</button></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <h1 class="section-title">הגדרות וסטטיסטיקות</h1>
+
+        <!-- ניהול פרופילים -->
+        <div class="settings-section">
+            <h2 style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--text-dark);">
+                ניהול פרופילים
+            </h2>
+            <div id="profilesContainer" class="content-carousel">
+                <div class="text-center py-5">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- סטטיסטיקות -->
+        <div class="settings-section">
+            <h2 style="font-size: 1.5rem; margin-bottom: 1.5rem; color: var(--text-dark);">
+                סטטיסטיקות צפייה
+            </h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 1rem; color: var(--text-dark);">צפיות יומיות</h3>
+                    <canvas id="dailyChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3 style="margin-bottom: 1rem; color: var(--text-dark);">תוכן לפי ז'אנר</h3>
+                    <canvas id="genreChart"></canvas>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin-top: 2rem;">
+                <div style="background: var(--input-bg); padding: 1.5rem; border-radius: 12px; text-align: center;">
+                    <div style="font-size: 2.5rem; color: var(--primary-blue); font-weight: bold;" id="totalWatched">0</div>
+                    <div style="color: var(--text-dark); margin-top: 0.5rem;">סה"כ נצפו</div>
+                </div>
+                
+                <div style="background: var(--input-bg); padding: 1.5rem; border-radius: 12px; text-align: center;">
+                    <div style="font-size: 2.5rem; color: var(--primary-yellow); font-weight: bold;" id="totalCompleted">0</div>
+                    <div style="color: var(--text-dark); margin-top: 0.5rem;">הושלמו</div>
+                </div>
+                
+                <div style="background: var(--input-bg); padding: 1.5rem; border-radius: 12px; text-align: center;">
+                    <div style="font-size: 2.5rem; color: var(--primary-blue); font-weight: bold;" id="totalHours">0</div>
+                    <div style="color: var(--text-dark); margin-top: 0.5rem;">שעות צפייה</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal להוספת פרופיל -->
+    <div id="addProfileModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: var(--card-white); padding: 2rem; border-radius: 16px; max-width: 500px; width: 90%;">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-dark);">הוספת פרופיל חדש</h3>
+            
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dark); font-weight: 500;">שם הפרופיל</label>
+                <input type="text" id="newProfileName" class="form-control" placeholder="הזן שם">
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn btn-primary" onclick="saveNewProfile()">שמור</button>
+                <button class="btn" style="background: #ccc; color: #333;" onclick="closeAddModal()">ביטול</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal לעריכת פרופיל -->
+    <div id="editProfileModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: var(--card-white); padding: 2rem; border-radius: 16px; max-width: 500px; width: 90%;">
+            <h3 style="margin-bottom: 1.5rem; color: var(--text-dark);">עריכת פרופיל</h3>
+            
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: var(--text-dark); font-weight: 500;">שם הפרופיל</label>
+                <input type="text" id="editProfileName" class="form-control" placeholder="הזן שם חדש">
+            </div>
+            
+            <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                <button class="btn btn-primary" onclick="saveProfileChanges()">שמור</button>
+                <button class="btn" style="background: #ccc; color: #333;" onclick="closeEditModal()">ביטול</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        let profiles = [];
+        let dailyChart = null;
+        let genreChart = null;
+        let editingProfileId = null;
+
+        async function loadProfiles() {
+            try {
+                const response = await API.getProfiles();
+                profiles = response.data || response.profiles || [];
+                
+                const container = document.getElementById('profilesContainer');
+
+                if (!profiles.length) {
+                    container.innerHTML = '<p class="text-muted">אין פרופילים עדיין</p>';
+                    return;
+                }
+
+                container.innerHTML = profiles.map(profile => `
+                    <div class="profile-item" style="flex: 0 0 180px;">
+                        <div>
+                            <p class="profile-name" style="font-weight: 600; color: var(--text-dark); text-align: center;">
+                                ${profile.name}
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; justify-content: center; margin-top: 0.5rem;">
+                            <button onclick="showEditModal('${profile._id}', '${profile.name.replace(/'/g, "\\'")}')" 
+                                    style="padding: 0.3rem 0.8rem; background: var(--primary-blue); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                                ערוך
+                            </button>
+                            <button onclick="deleteProfile('${profile._id}')" 
+                                    style="padding: 0.3rem 0.8rem; background: #ff4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem;">
+                                מחק
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                if (profiles.length < 5) {
+                    container.innerHTML += `
+                        <div class="profile-item" style="flex: 0 0 180px;" onclick="showAddModal()">
+                            <div style="width: 150px; height: 150px; border: 3px dashed var(--input-border); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--primary-blue); cursor: pointer; margin-bottom: 1rem;">
+                                +
+                            </div>
+                            <p class="profile-name" style="text-align: center;">הוסף פרופיל</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading profiles:', error);
+            }
+        }
+
+        async function deleteProfile(profileId) {
+            if (!confirm('האם אתה בטוח שברצונך למחוק פרופיל זה?')) return;
+            
+            try {
+                await API.deleteProfile(profileId);
+                alert('הפרופיל נמחק בהצלחה');
+                loadProfiles();
+            } catch (error) {
+                alert(error.message || 'שגיאה במחיקת הפרופיל');
+            }
+        }
+
+        // --- ניהול מודל הוספת פרופיל ---
+        function showAddModal() {
+            document.getElementById('addProfileModal').style.display = 'flex';
+        }
+
+        function closeAddModal() {
+            document.getElementById('addProfileModal').style.display = 'none';
+            document.getElementById('newProfileName').value = '';
+        }
+
+        async function saveNewProfile() {
+            const name = document.getElementById('newProfileName').value.trim();
+            if (!name) {
+                alert('אנא הזן שם לפרופיל');
+                return;
+            }
+
+            try {
+                await API.createProfile({ name });
+                alert('פרופיל נוסף בהצלחה!');
+                closeAddModal();
+                loadProfiles();
+            } catch (error) {
+                alert(error.message || 'שגיאה בהוספת פרופיל');
+            }
+        }
+
+        // --- ניהול מודל עריכת פרופיל ---
+        function showEditModal(profileId, currentName) {
+            editingProfileId = profileId;
+            document.getElementById('editProfileName').value = currentName || '';
+            document.getElementById('editProfileModal').style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            editingProfileId = null;
+            document.getElementById('editProfileName').value = '';
+            document.getElementById('editProfileModal').style.display = 'none';
+        }
+
+        async function saveProfileChanges() {
+            if (!editingProfileId) return;
+
+            const newName = document.getElementById('editProfileName').value.trim();
+            if (!newName) {
+                alert('אנא הזן שם חדש לפרופיל');
+                return;
+            }
+
+            try {
+                await API.updateProfile(editingProfileId, { name: newName });
+                alert('הפרופיל עודכן בהצלחה');
+                closeEditModal();
+                loadProfiles();
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                alert(error.message || 'שגיאה בעדכון הפרופיל');
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await API.getWatchStats();
+                const stats = response.data;
+
+                document.getElementById('totalWatched').textContent = stats.summary.totalWatched;
+                document.getElementById('totalCompleted').textContent = stats.summary.totalCompleted;
+                const hours = Math.round(stats.summary.totalDuration / 3600);
+                document.getElementById('totalHours').textContent = hours;
+
+                // גרף יומי
+                if (stats.daily && stats.daily.length > 0) {
+                    const dates = stats.daily.map(d => d._id.date);
+                    const counts = stats.daily.map(d => d.count);
+
+                    if (dailyChart) dailyChart.destroy();
+                    
+                    const ctx = document.getElementById('dailyChart').getContext('2d');
+                    dailyChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: dates,
+                            datasets: [{
+                                label: 'צפיות',
+                                data: counts,
+                                backgroundColor: '#0078FF',
+                                borderColor: '#0078FF',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+                }
+
+                // גרף ז'אנרים
+                if (stats.byGenre && stats.byGenre.length > 0) {
+                    const genres = stats.byGenre.map(g => g._id);
+                    const counts = stats.byGenre.map(g => g.count);
+                    const colors = ['#0078FF', '#FFD24C', '#FFCC33', '#B5D5FF', '#F4F8FF'];
+
+                    if (genreChart) genreChart.destroy();
+                    
+                    const ctx = document.getElementById('genreChart').getContext('2d');
+                    genreChart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: genres,
+                            datasets: [{
+                                data: counts,
+                                backgroundColor: colors
+                            }]
+                        },
+                        options: {
+                            responsive: true
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function logout() {
+            try {
+                await API.logout();
+                window.location.href = '/login';
+            } catch (error) {
+                alert('שגיאה בהתנתקות');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProfiles();
+            loadStats();
+        });
+    </script>
+</body>
+</html>

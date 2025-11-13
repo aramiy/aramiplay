@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הרשמה - AramiPlay</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="auth-page">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <h1>AramiPlay</h1>
+            </div>
+            
+            <h2 class="auth-title">הרשמה למערכת</h2>
+            
+            <div id="errorAlert" class="alert alert-danger d-none"></div>
+            <div id="successAlert" class="alert alert-success d-none"></div>
+            
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="username" class="form-label">שם משתמש</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="username" 
+                           name="username" 
+                           placeholder="בחר שם משתמש"
+                           required 
+                           minlength="3">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email" class="form-label">אימייל</label>
+                    <input type="email" 
+                           class="form-control" 
+                           id="email" 
+                           name="email" 
+                           placeholder="your@email.com"
+                           required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">סיסמה</label>
+                    <input type="password" 
+                           class="form-control" 
+                           id="password" 
+                           name="password" 
+                           placeholder="לפחות 6 תווים"
+                           required 
+                           minlength="6">
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirmPassword" class="form-label">אימות סיסמה</label>
+                    <input type="password" 
+                           class="form-control" 
+                           id="confirmPassword" 
+                           name="confirmPassword" 
+                           placeholder="הזן סיסמה שוב"
+                           required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="profileName" class="form-label">שם פרופיל</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="profileName" 
+                           name="profileName" 
+                           placeholder="השם שיוצג בפרופיל">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    הירשם
+                </button>
+            </form>
+            
+            <div class="auth-footer">
+                <p>כבר יש לך חשבון? 
+                    <a href="/login" class="auth-link">התחבר עכשיו</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('registerForm');
+        const errorAlert = document.getElementById('errorAlert');
+        const successAlert = document.getElementById('successAlert');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            errorAlert.classList.add('d-none');
+            successAlert.classList.add('d-none');
+            
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (password !== confirmPassword) {
+                errorAlert.textContent = 'הסיסמאות אינן תואמות';
+                errorAlert.classList.remove('d-none');
+                return;
+            }
+            
+            const formData = {
+                username: document.getElementById('username').value,
+                email: document.getElementById('email').value,
+                password: password,
+                profileName: document.getElementById('profileName').value
+            };
+            
+            try {
+                const response = await fetch('/api/auth/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    successAlert.textContent = 'הרשמה הצליחה! מעביר לעמוד הראשי...';
+                    successAlert.classList.remove('d-none');
+                    
+                    setTimeout(() => {
+                        window.location.href = '/feed';
+                    }, 1500);
+                } else {
+                    errorAlert.textContent = data.message || 'שגיאה בהרשמה';
+                    errorAlert.classList.remove('d-none');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                errorAlert.textContent = 'שגיאת רשת. אנא נסה שוב.';
+                errorAlert.classList.remove('d-none');
+            }
+        });
+    </script>
+</body>
+</html>

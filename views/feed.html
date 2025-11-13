@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AramiPlay - דף הבית</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="/feed" class="navbar-brand">AramiPlay</a>
+            <ul class="navbar-menu">
+                <!-- בחירת פרופיל -->
+                <li>
+                    <select id="profileSelect" class="navbar-select" onchange="onProfileChange(this.value)">
+                        <option value="">טוען פרופילים...</option>
+                    </select>
+                </li>
+
+                <li><a href="/feed" class="navbar-link">דף הבית</a></li>
+                <li><a href="/settings" class="navbar-link">הגדרות</a></li>
+                <!-- כפתור ניהול - מוצג רק לאדמין -->
+                <li id="adminNavItem" style="display:none;">
+                    <a href="/admin" class="navbar-link">ניהול</a>
+                </li>
+
+                <!-- כפתור יציאה עובד עם main.js (id="logoutBtn") -->
+                <li>
+                    <button id="logoutBtn" class="btn-logout">התנתק</button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <!-- Hero Banner -->
+        <div class="hero-banner" id="heroBanner">
+            <div class="hero-content">
+                <h1 class="hero-title">ברוכים הבאים ל-AramiPlay</h1>
+                <p class="hero-description">
+                    גלה סרטים וסדרות חדשות בכל יום. צפה בכל מקום ובכל זמן.
+                </p>
+            </div>
+        </div>
+
+        <!-- חיפוש -->
+        <div class="content-section">
+            <h2 class="section-title">חיפוש</h2>
+            <div class="search-bar">
+                <input
+                    type="text"
+                    id="searchInput"
+                    class="search-input"
+                    placeholder="חפש סרט או סדרה..."
+                >
+            </div>
+            <div class="content-carousel" id="searchResults"></div>
+        </div>
+
+        <!-- Continue Watching -->
+        <div class="content-section" id="continueWatchingSection" style="display: none;">
+            <h2 class="section-title">המשך צפייה</h2>
+            <div class="content-carousel" id="continueWatchingCarousel"></div>
+        </div>
+
+        <!-- Popular Content -->
+        <div class="content-section">
+            <h2 class="section-title">פופולרי כעת</h2>
+            <div class="content-carousel" id="popularCarousel">
+                <div class="text-center py-5">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="content-section">
+            <h2 class="section-title">מומלצים עבורך</h2>
+            <div class="content-carousel" id="recommendationsCarousel">
+                <div class="text-center py-5">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Content by Genre -->
+        <div id="genreSections"></div>
+    </div>
+
+    <script src="/js/main.js"></script>
+    <script>
+        let currentUser = null;
+        let currentProfileId = null;
+
+        async function init() {
+            try {
+                const authResponse = await API.checkAuth();
+                if (!authResponse.authenticated) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                currentUser = authResponse.user;
+                currentProfileId =
+                    currentUser?.currentProfile?._id ||
+                    currentUser?.currentProfileId ||
+                    null;
+
+                // הצגת כפתור ניהול רק לאדמין
+                const isAdmin = !!(currentUser?.role === 'admin' || currentUser?.isAdmin === true);
+                const adminItem = document.getElementById('adminNavItem');
+                if (adminItem) adminItem.style.display = isAdmin ? 'list-item' : 'none';
+
+                // קודם נטען פרופילים ל-dropdown
+                await loadProfilesDropdown();
+
+                // אחר כך נטען את שאר החלקים של הפיד
+                await Promise.all([
+                    loadContinueWatching(),
+                    loadPopular(),
+                    loadRecommendations(),
+                    loadNewByGenre()
+                ]);
+
+                // חיפוש – אם יש handleSearch ב-main.js
+                const searchInput = document.getElementById('searchInput');
+                if (searchInput && typeof handleSearch === 'function') {
+                    searchInput.addEventListener('input', (e) => {
+                        handleSearch(e.target.value);
+                    });
+                }
+
+            } catch (error) {
+                console.error('Init error:', error);
+            }
+        }
+
+        // ===== טעינת פרופילים ל-dropdown =====
+        async function loadProfilesDropdown() {
+            const select = document.getElementById('profileSelect');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">טוען פרופילים...</option>';
+
+            try {
+                const res = await API.getProfiles(); // /api/users/profiles
+
+                // מנסים לתפוס מבנים שונים: {data: [...] } או {profiles: [...] }
+                const profiles = res.data || res.profiles || [];
+                const serverCurrentProfileId =
+                    res.currentProfileId ||
+                    res.currentProfile?._id ||
+                    currentProfileId;
+
+                if (!profiles.length) {
+                    select.innerHTML = '<option value="">אין פרופילים</option>';
+                    return;
+                }
+
+                select.innerHTML = profiles
+                    .map((p) => {
+                        const isSelected =
+                            serverCurrentProfileId &&
+                            p._id &&
+                            p._id.toString() === serverCurrentProfileId.toString();
+
+                        return `<option value="${p._id}" ${
+                          isSelected ? 'selected' : ''
+                        }>${p.name}</option>`;
+                    })
+                    .join('');
+
+                // אם אין currentProfileId, נגדיר את הראשון כברירת מחדל
+                if (!serverCurrentProfileId && profiles[0]) {
+                    currentProfileId = profiles[0]._id;
+                } else {
+                    currentProfileId = serverCurrentProfileId;
+                }
+
+            } catch (error) {
+                console.error('Error loading profiles:', error);
+                select.innerHTML = '<option value="">שגיאה בטעינת פרופילים</option>';
+            }
+        }
+
+        async function onProfileChange(profileId) {
+            if (!profileId) return;
+
+            try {
+                await API.switchProfile(profileId); // POST /api/users/profiles/:id/switch
+                // לאחר החלפת פרופיל – מרעננים את הדף כדי שהמשך צפייה/המלצות וכו' יתעדכנו
+                window.location.reload();
+            } catch (error) {
+                console.error('Error switching profile:', error);
+                alert('שגיאה בהחלפת פרופיל');
+            }
+        }
+
+        async function loadContinueWatching() {
+            try {
+                const response = await API.getContinueWatching();
+                if (response.data && response.data.length > 0) {
+                    const section = document.getElementById('continueWatchingSection');
+                    const carousel = document.getElementById('continueWatchingCarousel');
+
+                    section.style.display = 'block';
+                    carousel.innerHTML = response.data
+                        .map((item) => createContentCard(item.contentId))
+                        .join('');
+                }
+            } catch (error) {
+                console.error('Error loading continue watching:', error);
+            }
+        }
+
+        async function loadPopular() {
+            try {
+                const response = await API.getPopular();
+                const carousel = document.getElementById('popularCarousel');
+
+                if (response.data && response.data.length > 0) {
+                    carousel.innerHTML = response.data
+                        .map((content) => createContentCard(content))
+                        .join('');
+                } else {
+                    carousel.innerHTML = '<p class="text-muted">אין תוכן זמין כרגע</p>';
+                }
+            } catch (error) {
+                console.error('Error loading popular:', error);
+                document.getElementById('popularCarousel').innerHTML =
+                    '<p class="text-muted">שגיאה בטעינת תוכן</p>';
+            }
+        }
+
+        async function loadRecommendations() {
+            try {
+                const response = await API.getRecommendations();
+                const carousel = document.getElementById('recommendationsCarousel');
+
+                if (response.data && response.data.length > 0) {
+                    carousel.innerHTML = response.data
+                        .map((content) => createContentCard(content))
+                        .join('');
+                } else {
+                    carousel.innerHTML = '<p class="text-muted">אין המלצות כרגע</p>';
+                }
+            } catch (error) {
+                console.error('Error loading recommendations:', error);
+                document.getElementById('recommendationsCarousel').innerHTML =
+                    '<p class="text-muted">שגיאה בטעינת המלצות</p>';
+            }
+        }
+
+        async function loadNewByGenre() {
+            try {
+                const response = await API.getNewByGenre();
+                const container = document.getElementById('genreSections');
+
+                if (response.data) {
+                    const html = Object.entries(response.data)
+                        .map(
+                            ([genre, content]) => `
+                        <div class="content-section">
+                            <h2 class="section-title">
+                                ${genre} - חדש
+                                <a href="/genre/${encodeURIComponent(
+                                    genre
+                                )}" style="font-size: 1rem; color: var(--primary-yellow); margin-right: 1rem;">
+                                    צפה בהכל ←
+                                </a>
+                            </h2>
+                            <div class="content-carousel">
+                                ${content.map((item) => createContentCard(item)).join('')}
+                            </div>
+                        </div>
+                    `
+                        )
+                        .join('');
+
+                    container.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error loading new by genre:', error);
+            }
+        }
+
+        function createContentCard(content) {
+            return `
+                <div class="content-card" onclick="goToContent('${content._id}')">
+                    <img src="${content.thumbnailUrl}" alt="${content.title}">
+                    <div class="content-card-info">
+                        <h4 class="content-card-title">${content.title}</h4>
+                        <p class="content-card-meta">
+                            ${content.releaseYear} • ${
+                                content.type === 'movie' ? 'סרט' : 'סדרה'
+                            }
+                            ${content.rating?.imdb ? ' • ⭐ ' + content.rating.imdb : ''}
+                        </p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function goToContent(contentId) {
+            window.location.href = `/content/${contentId}`;
+        }
+
+        function playHeroContent() {
+            alert('נגן Hero - בשלבי פיתוח');
+        }
+
+        function showHeroInfo() {
+            alert('מידע על תוכן Hero - בשלבי פיתוח');
+        }
+
+        // הפעלה כשעמוד נטען
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

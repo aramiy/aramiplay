@@ -1,0 +1,126 @@
+const OMDB_KEY = 'מפתח';
+
+const TITLES = [
+  "The Shawshank Redemption",
+  "The Godfather",
+  "The Dark Knight",
+  "Inception",
+  "Fight Club",
+  "Pulp Fiction",
+  "Forrest Gump",
+  "The Matrix",
+  "Interstellar",
+  "The Lord of the Rings: The Fellowship of the Ring",
+  "The Lord of the Rings: The Two Towers",
+  "The Lord of the Rings: The Return of the King",
+  "The Silence of the Lambs",
+  "Se7en",
+  "Gladiator",
+  "Titanic",
+  "Goodfellas",
+  "The Green Mile",
+  "Saving Private Ryan",
+  "The Lion King",
+  "Star Wars: Episode IV - A New Hope",
+  "Star Wars: Episode V - The Empire Strikes Back",
+  "The Departed",
+  "The Prestige",
+  "Whiplash",
+  "The Social Network",
+  "Django Unchained",
+  "Inglourious Basterds",
+  "The Wolf of Wall Street",
+  "Avengers: Endgame",
+  "Avatar",
+  "Parasite",
+  "Spirited Away",
+  "Toy Story",
+  "Toy Story 3",
+  "Inside Out",
+  "Back to the Future",
+  "Terminator 2: Judgment Day",
+  "Alien",
+  "Aliens",
+  "Jurassic Park",
+  "The Truman Show",
+  "La La Land",
+  "Mad Max: Fury Road",
+  "Guardians of the Galaxy",
+  "No Country for Old Men",
+  "12 Angry Men",
+  "Schindler's List",
+  "City of God"
+];
+
+async function fetchFromOmdb(title) {
+  const url = `https://www.omdbapi.com/?apikey=${OMDB_KEY}&t=${encodeURIComponent(title)}&type=movie`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if (data.Response === 'False') {
+    console.warn('OMDb לא מצא את הסרט:', title, 'Error:', data.Error);
+    return null;
+  }
+  return data;
+}
+
+
+function buildPayloadFromOmdb(omdb) {
+  const runtimeMinutes = parseInt(omdb.Runtime, 10); // "142 min" → 142
+  return {
+    title: omdb.Title,
+    description: omdb.Plot && omdb.Plot !== 'N/A' ? omdb.Plot : '',
+    type: 'movie',
+    genres: omdb.Genre && omdb.Genre !== 'N/A'
+      ? omdb.Genre.split(',').map(g => g.trim())
+      : [],
+    releaseYear: parseInt(omdb.Year, 10) || undefined,
+    director: omdb.Director && omdb.Director !== 'N/A' ? omdb.Director : '',
+    duration: Number.isFinite(runtimeMinutes) ? runtimeMinutes * 60 : undefined, // שניות
+    thumbnailUrl: omdb.Poster && omdb.Poster !== 'N/A' ? omdb.Poster : undefined,
+    videoUrl: '/videos/demo.mp4',          // כמו שביקשת – אותו דמו לכולם
+    cast: omdb.Actors && omdb.Actors !== 'N/A'
+      ? omdb.Actors.split(',').map(a => a.trim())
+      : [],
+    // אופציונלי: אם אתה רוצה גם לשמור דירוג:
+    rating: (omdb.imdbRating && omdb.imdbRating !== 'N/A')
+      ? { imdb: parseFloat(omdb.imdbRating) }
+      : undefined
+  };
+}
+
+
+async function createContent(payload) {
+  const res = await fetch('/api/admin/content', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    console.error('❌ נכשל ליצור תוכן:', payload.title, 'Status:', res.status, 'Response:', data);
+  } else {
+    console.log('✅ נוצר תוכן:', payload.title, '→ id:', data.data?._id || '(ללא)');
+  }
+}
+
+
+async function seedMovies() {
+  for (const title of TITLES) {
+    try {
+      console.log('--- מטפל בסרט:', title, '---');
+      const omdb = await fetchFromOmdb(title);
+      if (!omdb) continue;
+
+      const payload = buildPayloadFromOmdb(omdb);
+      await createContent(payload);
+    } catch (err) {
+      console.error('⚠️ שגיאה בסרט', title, err);
+    }
+  }
+  console.log('🎬 סיימתי לנסות להוסיף את כל הסרטים.');
+}
+
+// הרצה
+seedMovies();
